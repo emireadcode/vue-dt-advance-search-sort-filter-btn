@@ -1,0 +1,103 @@
+version: '3.9'
+services:
+  nginx:
+    image: nginx:latest
+    volumes:
+      - "./docker/etc/nginx/default.template.conf:/etc/nginx/conf.d/default.conf"
+      - "./docker/etc/nginx/ssl:/etc/ssl"
+      - "./:/var/www/html:cached"
+    ports:
+      - "8050:80"
+      - "3000:443"
+    restart: always
+  php:
+    image: nanoninja/php-fpm:latest
+    restart: always
+    ports:
+      - "9000:9000"
+    volumes:
+      - "./docker/etc/php/php.ini:/usr/local/etc/php/conf.d/php.ini"
+      - "./:/var/www/html:cached"
+    depends_on:
+      - dbone
+      - dbtwo
+      - nginx
+      - sphinx
+  dbone:
+    image: mysql:latest
+    restart: always
+    container_name: dbone
+    ports:
+      - "3307:3306"
+    environment:
+      - MYSQL_HOST=dbone
+      - MYSQL_DATABASE=sakila
+      - MYSQL_USER=user
+      - MYSQL_PASSWORD=test
+      - MYSQL_ROOT_PASSWORD=test
+      - TZ=Africa/Lagos
+    volumes:
+      - ./docker/data/db/mysql/dump/2-create-schema.sql:/docker-entrypoint-initdb.d/2.sql
+      - ./docker/data/db/mysql/dump/3-insert-data.sql:/docker-entrypoint-initdb.d/3.sql
+      - ./docker/data/db/mysql/dump/4-insert-data.sql:/docker-entrypoint-initdb.d/4.sql
+      - ./docker/data/db/mysql/dump/5-insert-data.sql:/docker-entrypoint-initdb.d/5.sql
+      - ./docker/data/db/mysql/dump/6-insert-data.sql:/docker-entrypoint-initdb.d/6.sql
+      - ./docker/data/db/mysql/dump/7-insert-data.sql:/docker-entrypoint-initdb.d/7.sql
+      - ./docker/data/db/mysql/dump/8-insert-data.sql:/docker-entrypoint-initdb.d/8.sql
+      - ./docker/data/db/mysql/dump/9-insert-data.sql:/docker-entrypoint-initdb.d/9.sql
+      - ./docker/data/db/mysql/dump/10-insert-data.sql:/docker-entrypoint-initdb.d/9_a.sql
+      - ./docker/data/db/mysql/dump/11-insert-data.sql:/docker-entrypoint-initdb.d/9_b.sql
+      - ./docker/data/db/mysql/dump/12-insert-data.sql:/docker-entrypoint-initdb.d/9_c.sql
+      - ./docker/data/db/mysql/dump/13-insert-data.sql:/docker-entrypoint-initdb.d/9_d.sql
+      - persistent_1:/var/lib/mysql
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_general_ci", "--skip-character-set-client-handshake", "--default-authentication-plugin=caching_sha2_password"]
+  dbtwo:
+    image: mysql:latest
+    restart: always
+    container_name: dbtwo
+    ports:
+      - "3308:3306"
+    environment:
+      - MYSQL_HOST=dbtwo
+      - MYSQL_DATABASE=mysql_json_db
+      - MYSQL_USER=user
+      - MYSQL_PASSWORD=test
+      - MYSQL_ROOT_PASSWORD=test
+      - TZ=Africa/Lagos
+    volumes:
+      - ./docker/data/db/mysql/dump/mysql_json_db.sql:/docker-entrypoint-initdb.d/1.sql
+      - persistent_2:/var/lib/mysql
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_general_ci", "--skip-character-set-client-handshake", "--default-authentication-plugin=caching_sha2_password"]
+  phpmyadmin:
+    image: phpmyadmin:latest
+    restart: always
+    container_name: phpmyadmin
+    depends_on:
+      - dbone
+      - dbtwo
+    ports:
+      - "8070:80"
+    environment:
+      - MAX_EXECUTION_TIME=0
+      - PMA_HOSTS=dbone,dbtwo
+      - PMA_ARBITRARY=1
+  sphinx:
+    build:
+      context: ./docker/etc/sphinx
+      dockerfile: Dockerfile-sphinx
+    container_name: sphinx
+    restart: always
+    depends_on:
+      - dbone
+      - dbtwo
+    ports:
+      - "9311:9306"
+    volumes:
+      - "./docker/etc/sphinx/conf:/sphinx/conf"
+      - "./docker/data/index/sphinx/runs:/sphinx/runs"
+      - "./docker/data/index/sphinx/logs:/sphinx/logs"
+      - "./docker/data/index/sphinx/binlog:/sphinx/binlog"
+    entrypoint: ["/bin/sh", "/sphinx/conf/entrypoint.sh"]
+volumes:
+  persistent_1:
+  persistent_2:

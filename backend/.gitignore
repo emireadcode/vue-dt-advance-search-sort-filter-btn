@@ -1,0 +1,17 @@
+system
+changelogs/
+SECURITY.md
+CHANGELOG.md
+vendor/
+composer.lock
+docker/data
+writable/debugbar/*
+!writable/debugbar/index.html
+writable/logs/*
+!writable/logs/index.html
+writable/cache/*
+!writable/cache/index.html
+writable/uploads/*
+!writable/uploads/index.html
+writable/session/*
+!writable/session/index.html
